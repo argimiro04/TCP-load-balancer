@@ -1,0 +1,35 @@
+# Build output
+build/
+cmake-build-*/
+out/
+
+# CMake caches (in-source builds)
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+Makefile
+compile_commands.json
+
+# Binaries and objects
+*.o
+*.obj
+*.a
+*.so
+*.exe
+/lb
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env

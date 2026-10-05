@@ -1,0 +1,20 @@
+services:
+  lb:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "8080:8080"
+    command: sleep infinity
+
+  backend1:
+    image: traefik/whoami
+    hostname: backend1
+
+  backend2:
+    image: traefik/whoami
+    hostname: backend2
+
+  backend3:
+    image: traefik/whoami
+    hostname: backend3
