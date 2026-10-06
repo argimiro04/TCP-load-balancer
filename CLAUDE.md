@@ -14,6 +14,12 @@ Proyecto de portfolio: un balanceador de carga / reverse proxy TCP (capa 4) escr
 - Prioriza la legibilidad sobre la optimización. Comenta el *porqué* de las decisiones no evidentes (llamadas a sockets, sincronización), no el *qué*.
 - Compila con `-Wall -Wextra -Wpedantic` sin warnings.
 - Al terminar, resume qué archivos has creado o cambiado y cómo probarlo.
+- `docs/learning-log.md` lo escribo yo y solo yo. No lo edites, no lo rellenes, no lo reformatees y no propongas texto para él, aunque una tarea parezca pedirlo. Solo puedes leerlo si te lo pido.
+
+## Flujo de Git
+- Nunca hagas commits en `main`. Trabaja en la rama que te indique.
+- Commits pequeños, uno por paso lógico, con mensajes en inglés (Conventional Commits).
+- No hagas merge: el merge lo hago yo tras revisar el PR.
 
 ## Compilar y ejecutar
 ```powershell
