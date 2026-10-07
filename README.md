@@ -143,4 +143,4 @@ This project is developed with AI assistance using [Claude Code](https://claude.
 
 ## License
 
-[MIT](LICENSE) © 2026 Argi
+[MIT](LICENSE) © 2026 Argimiro
