@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesto (borrador pendiente de revisión).
+Aceptado.
 
 ## Contexto
 
