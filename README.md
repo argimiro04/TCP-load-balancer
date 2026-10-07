@@ -139,7 +139,7 @@ The client IP is the Docker gateway, not the host's address, because Docker NATs
 
 ## How this was built
 
-This project is developed with AI assistance using [Claude Code](https://claude.com/claude-code). The architecture decisions and working rules are written down in [`CLAUDE.md`](CLAUDE.md), which the assistant follows in every session; I define the scope of each session and review the resulting code and decisions. My personal record of each milestone is kept in the [learning log](docs/learning-log/).
+This project is developed with AI assistance using [Claude Code](https://claude.com/claude-code). The architecture decisions and working rules are written down in [`CLAUDE.md`](CLAUDE.md), which the assistant follows in every session; I define the scope of each session and review the resulting code and decisions. My personal record of each milestone is kept in the [learning log](docs/learning-log/). The acceptance tests of each milestone are run and annotated by me; the recorded terminal sessions and my notes on them are in the same folder (for example, [milestone 2](docs/learning-log/milestone-2-pruebas.md)).
 
 ## License
 
