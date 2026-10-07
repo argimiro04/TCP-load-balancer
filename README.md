@@ -120,7 +120,7 @@ The client IP is the Docker gateway, not the host's address, because Docker NATs
 ├── docker-compose.yml   # lb container + backend1..3 (traefik/whoami)
 ├── docs/
 │   ├── adr/             # Architecture Decision Records
-│   └── learning-log.md  # What I learned in each milestone (written by me, not AI-generated)
+│   └── learning-log/    # What I learned in each milestone (written by me, not AI-generated)
 ├── LICENSE
 ├── README.md
 └── src/
@@ -139,7 +139,7 @@ The client IP is the Docker gateway, not the host's address, because Docker NATs
 
 ## How this was built
 
-This project is developed with AI assistance using [Claude Code](https://claude.com/claude-code). The architecture decisions and working rules are written down in [`CLAUDE.md`](CLAUDE.md), which the assistant follows in every session; I define the scope of each session and review the resulting code and decisions. My personal record of each milestone is kept in the [learning log](docs/learning-log.md).
+This project is developed with AI assistance using [Claude Code](https://claude.com/claude-code). The architecture decisions and working rules are written down in [`CLAUDE.md`](CLAUDE.md), which the assistant follows in every session; I define the scope of each session and review the resulting code and decisions. My personal record of each milestone is kept in the [learning log](docs/learning-log/).
 
 ## License
 
