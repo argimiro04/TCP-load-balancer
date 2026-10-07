@@ -1,12 +1,16 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cerrno>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <string>
 
@@ -130,6 +134,116 @@ void log_backend_connection(int backend_fd) {
     std::cout << "Backend conectado: " << format_address(reinterpret_cast<sockaddr*>(&local)) << " -> "
               << format_address(reinterpret_cast<sockaddr*>(&remote)) << std::endl;
 }
+
+// Envía len bytes completos. Devuelve false si el envío falla (errno indica
+// el motivo).
+bool send_all(int fd, const char* data, size_t len) {
+    while (len > 0) {
+        // send puede aceptar solo una parte si el buffer del kernel está casi
+        // lleno, así que repetimos con lo que falte. MSG_NOSIGNAL evita que
+        // escribir en una conexión cerrada por el otro extremo mate el proceso
+        // con SIGPIPE: en su lugar send devuelve -1 con errno = EPIPE.
+        ssize_t sent = send(fd, data, len, MSG_NOSIGNAL);
+        if (sent < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            return false;
+        }
+        data += sent;
+        len -= static_cast<size_t>(sent);
+    }
+    return true;
+}
+
+struct RelayResult {
+    size_t client_to_backend = 0;
+    size_t backend_to_client = 0;
+    std::string reason;
+};
+
+// Copia bytes en ambos sentidos entre cliente y backend hasta que los dos
+// lados llegan a EOF o hay un error (ver docs/adr/0002). No cierra los
+// descriptores: eso queda para quien los abrió.
+RelayResult relay(int client_fd, int backend_fd) {
+    constexpr int kClient = 0;
+    constexpr int kBackend = 1;
+    const char* const names[2] = {"cliente", "backend"};
+    const int fds[2] = {client_fd, backend_fd};
+
+    RelayResult result;
+    size_t* counters[2] = {&result.client_to_backend, &result.backend_to_client};
+    bool reading[2] = {true, true};
+    char buffer[16 * 1024];
+
+    // poll nos despierta en cuanto cualquiera de los dos lados tiene datos.
+    // Con recv bloqueante sobre un solo lado nos quedaríamos esperando a ese
+    // lado aunque el otro tuviera algo que enviar.
+    while (reading[kClient] || reading[kBackend]) {
+        pollfd pfds[2];
+        for (int i = 0; i < 2; ++i) {
+            // Un fd negativo hace que poll ignore la entrada: así dejamos de
+            // vigilar un lado que ya ha llegado a EOF.
+            pfds[i].fd = reading[i] ? fds[i] : -1;
+            pfds[i].events = POLLIN;
+            pfds[i].revents = 0;
+        }
+
+        if (poll(pfds, 2, -1) < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            result.reason = std::string("error en poll: ") + std::strerror(errno);
+            return result;
+        }
+
+        for (int i = 0; i < 2; ++i) {
+            const int other = 1 - i;
+            if (pfds[i].revents == 0) {
+                continue;
+            }
+            if (pfds[i].revents & (POLLERR | POLLNVAL)) {
+                // SO_ERROR recupera el error pendiente del socket (p. ej. ECONNRESET).
+                int err = 0;
+                socklen_t err_len = sizeof(err);
+                getsockopt(fds[i], SOL_SOCKET, SO_ERROR, &err, &err_len);
+                result.reason = std::string("error en el socket del ") + names[i] + ": " +
+                                (err != 0 ? std::strerror(err) : "POLLERR/POLLNVAL");
+                return result;
+            }
+
+            // POLLHUP también se trata leyendo: puede quedar algo en el buffer
+            // y recv devolverá 0 cuando se haya vaciado.
+            ssize_t received = recv(fds[i], buffer, sizeof(buffer), 0);
+            if (received < 0) {
+                if (errno == EINTR) {
+                    continue;
+                }
+                result.reason = std::string("error al recibir del ") + names[i] + ": " + std::strerror(errno);
+                return result;
+            }
+            if (received == 0) {
+                // EOF: este lado ya no enviará más, pero puede seguir leyendo.
+                // TCP cierra por sentidos (half-close), así que solo cerramos la
+                // escritura hacia el otro lado para que vea también el EOF, y la
+                // respuesta que aún esté en camino sigue fluyendo.
+                if (shutdown(fds[other], SHUT_WR) < 0 && errno != ENOTCONN) {
+                    perror("shutdown");
+                }
+                reading[i] = false;
+                continue;
+            }
+            if (!send_all(fds[other], buffer, static_cast<size_t>(received))) {
+                result.reason = std::string("error al enviar al ") + names[other] + ": " + std::strerror(errno);
+                return result;
+            }
+            *counters[i] += static_cast<size_t>(received);
+        }
+    }
+
+    result.reason = "ambos lados cerraron (EOF)";
+    return result;
+}
 }  // namespace
 
 int main() {
@@ -164,6 +278,10 @@ int main() {
             continue;
         }
         log_backend_connection(backend_fd);
+
+        RelayResult result = relay(client_fd, backend_fd);
+        std::cout << "Sesión cerrada: cliente->backend " << result.client_to_backend << " B, backend->cliente "
+                  << result.backend_to_client << " B; motivo: " << result.reason << std::endl;
 
         if (close(backend_fd) < 0) {
             perror("close(backend)");
